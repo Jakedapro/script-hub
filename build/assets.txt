@@ -1,0 +1,33 @@
+rbxasset://fonts/families/GothamSSm.json    first used by StarterGui.ScreenGui.main.Topbar.FakeTabs.FakeTab.Content.TextLabel.FontFace
+rbxasset://fonts/families/Inconsolata.json    first used by StarterGui.ScreenGui.main.ScrollingFrame.TextBox.FontFace
+rbxasset://fonts/families/SourceSansPro.json    first used by StarterGui.ScreenGui.Frame.TabButton (Active).Hitbox.FontFace
+rbxassetid://106640334752928    first used by StarterGui.ScreenGui.Frame.IconHolder.ImageLabel.Image
+rbxassetid://10709782154    first used by StarterGui.ScreenGui.Frame.TabButton.ImageLabel.Image
+rbxassetid://10709791523    first used by StarterGui.ScreenGui.library.ScrollingFrame.Frame.Topbar.ImageButton.Image
+rbxassetid://10709799288    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10709806740    first used by StarterGui.ScreenGui.main.SideBar.Content.TabButton.ImageLabel.Image
+rbxassetid://10709807111    first used by StarterGui.ScreenGui.Frame.TabButton (Active).ImageLabel.Image
+rbxassetid://10709811365    first used by StarterGui.ScreenGui.main.SideBar.Content.TabButton.ImageLabel.Image
+rbxassetid://10709812159    first used by StarterGui.ScreenGui.output.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10723375128    first used by StarterGui.ScreenGui.output.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10723387563    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10723404337    first used by StarterGui.ScreenGui.library.TextButton.ImageLabel.Image
+rbxassetid://10723407389    first used by StarterGui.ScreenGui.Frame.TabButton.ImageLabel.Image
+rbxassetid://10723415040    first used by StarterGui.ScreenGui.scriptstroe.ScrollingFrame.Frame.ImageLabel.Image
+rbxassetid://10734923549    first used by StarterGui.ScreenGui.main.AltToolbar.ImageLabel.Image
+rbxassetid://10734933222    first used by StarterGui.ScreenGui.accountmanager.ScrollingFrame.Frame.buttoncontainer.TextButton.ImageLabel.Image
+rbxassetid://10734934585    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10734941499    first used by StarterGui.ScreenGui.output.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10734943448    first used by StarterGui.ScreenGui.main.Topbar.FakeTabs.FakeTab.Content.ImageLabel.Image
+rbxassetid://10734943674    first used by StarterGui.ScreenGui.library.ScrollingFrame.TextButton.ImageLabel.Image
+rbxassetid://10734950020    first used by StarterGui.ScreenGui.Frame.TabButton.ImageLabel.Image
+rbxassetid://10734966248    first used by StarterGui.ScreenGui.library.ScrollingFrame.Frame.Frame.TextButton.Content.ImageLabel.Image
+rbxassetid://10747362241    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
+rbxassetid://10747362393    first used by StarterGui.ScreenGui.accountmanager.ScrollingFrame.Frame.buttoncontainer.TextButton.ImageLabel.Image
+rbxassetid://10747373176    first used by StarterGui.ScreenGui.main.SideBar.Content.TabButton.ImageLabel.Image
+rbxassetid://109566486248794    first used by StarterGui.ScreenGui.main.Topbar.AddTabButton.ImageLabel.Image
+rbxassetid://113988401397964    first used by StarterGui.ScreenGui.main.ImageLabel.Image
+rbxassetid://11702779409    first used by StarterGui.ScreenGui.output.ScrollingFrame.Gutter.TextLabel.FontFace
+rbxassetid://12187365364    first used by StarterGui.ScreenGui.Frame.TabButton (Active).Tooltip.TextLabel.FontFace
+rbxassetid://127840699991988    first used by StarterGui.ScreenGui.main.SideBar.ImageLabel.Image
+rbxassetid://357733779    first used by StarterGui.ScreenGui.Frame.TabButton (Active).Tooltip.ImageLabel.Image
