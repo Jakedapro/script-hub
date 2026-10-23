@@ -15,6 +15,7 @@ rbxassetid://10723404337    first used by StarterGui.ScreenGui.library.TextButto
 rbxassetid://10723407389    first used by StarterGui.ScreenGui.Frame.TabButton.ImageLabel.Image
 rbxassetid://10723415040    first used by StarterGui.ScreenGui.scriptstroe.ScrollingFrame.Frame.ImageLabel.Image
 rbxassetid://10734923549    first used by StarterGui.ScreenGui.main.AltToolbar.ImageLabel.Image
+rbxassetid://10734932586    first used by StarterGui.ScreenGui.EditorHistory (source)
 rbxassetid://10734933222    first used by StarterGui.ScreenGui.accountmanager.ScrollingFrame.Frame.buttoncontainer.TextButton.ImageLabel.Image
 rbxassetid://10734934585    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
 rbxassetid://10734941499    first used by StarterGui.ScreenGui.output.Toolbar2.TextButton.ImageLabel.Image
@@ -24,6 +25,7 @@ rbxassetid://10734950020    first used by StarterGui.ScreenGui.Frame.TabButton.I
 rbxassetid://10734966248    first used by StarterGui.ScreenGui.library.ScrollingFrame.Frame.Frame.TextButton.Content.ImageLabel.Image
 rbxassetid://10747362241    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image
 rbxassetid://10747362393    first used by StarterGui.ScreenGui.accountmanager.ScrollingFrame.Frame.buttoncontainer.TextButton.ImageLabel.Image
+rbxassetid://10747365359    first used by StarterGui.ScreenGui.EditorHistory (source)
 rbxassetid://10747373176    first used by StarterGui.ScreenGui.main.SideBar.Content.TabButton.ImageLabel.Image
 rbxassetid://109566486248794    first used by StarterGui.ScreenGui.main.Topbar.AddTabButton.ImageLabel.Image
 rbxassetid://113988401397964    first used by StarterGui.ScreenGui.main.ImageLabel.Image

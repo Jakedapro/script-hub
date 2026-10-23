@@ -2208,7 +2208,11 @@ local EDITOR_ACTIONS = {
 		task.spawn(ScriptActions.execute, editor.Text, currentName() or "Editor", notify)
 	end,
 	Clear = function()
+		if editor.Text == "" then
+			return
+		end
 		editor.Text = ""
+		notify("Cleared. Undo (Ctrl+Z) brings it back")
 	end,
 	Copy = function()
 		if not setClipboard then
@@ -5487,7 +5491,7 @@ local ButtonFx = require(Gui.ButtonFx)
 local Toast = {}
 
 local label = Instance.new("TextLabel")
-label.Name = "Toast"
+label.Name = "ToastLabel" -- not "Toast": that's this module's name, and Gui.Toast must find the module
 label.AnchorPoint = Vector2.new(0.5, 1)
 label.Position = UDim2.new(0.5, 0, 1, -24)
 label.AutomaticSize = Enum.AutomaticSize.XY
@@ -6169,6 +6173,179 @@ for _, b in page.Toolbar2:GetChildren() do
 		end)
 	end
 end
+
+Gui.Destroying:Once(function()
+	for _, connection in connections do
+		connection:Disconnect()
+	end
+end)
+
+end
+
+-- StarterGui.ScreenGui.EditorHistory (LocalScript)
+SOURCES[19] = function(script, require)
+-- Undo / Redo for the editor: buttons beside the + tab button, plus Ctrl+Z and Ctrl+Y (or
+-- Ctrl+Shift+Z). Typing is grouped into word-sized steps; a paste, Clear or Load is one step.
+local UserInputService = game:GetService("UserInputService")
+
+local Gui = script.Parent
+local ButtonFx = require(Gui.ButtonFx)
+
+local editor = Gui.main.ScrollingFrame.TextBox
+local topbar = Gui.main.Topbar
+local addTab = topbar.AddTabButton
+
+local ICONS = {undo = "rbxassetid://10747365359", redo = "rbxassetid://10734932586"} -- lucide undo-2 / redo-2
+local LIMIT = 200 -- steps kept
+local PAUSE = 0.8 -- seconds of no typing that end a step
+local GAP = 6
+
+local connections = {}
+local function track(connection)
+	table.insert(connections, connection)
+	return connection
+end
+
+-- history[index] is what the editor shows now; entries above it are what Redo brings back
+local history = {{text = editor.Text, cursor = editor.CursorPosition}}
+local index = 1
+local open = false -- the current step still takes more typing
+local lastEdit = 0
+local applying = false
+
+local buttons = {}
+local function refresh()
+	if buttons.undo then
+		ButtonFx.bind(buttons.undo):set({disabled = index <= 1})
+		ButtonFx.bind(buttons.redo):set({disabled = index >= #history})
+	end
+end
+
+local function push(state)
+	for i = #history, index + 1, -1 do
+		history[i] = nil -- a new edit drops what Redo could have brought back
+	end
+	table.insert(history, state)
+	if #history > LIMIT then
+		table.remove(history, 1)
+	end
+	index = #history
+end
+
+track(editor:GetPropertyChangedSignal("Text"):Connect(function()
+	if applying then
+		return
+	end
+	local text = editor.Text
+	local previous = history[index].text
+	if text == previous then
+		return
+	end
+	local state = {text = text, cursor = editor.CursorPosition}
+	local now = os.clock()
+	-- one character typed or deleted continues the step; anything bigger is a step of its own
+	local small = math.abs(#text - #previous) <= 1
+	if small and open and now - lastEdit < PAUSE then
+		history[index] = state
+	else
+		push(state)
+	end
+	lastEdit = now
+	-- a space or a new line closes the step, so undo goes back a word at a time
+	local typed = #text > #previous and state.cursor > 1 and text:sub(state.cursor - 1, state.cursor - 1) or ""
+	open = small and not typed:match("%s")
+	refresh()
+end))
+
+local function apply(state)
+	applying = true
+	-- the highlighter auto-closes brackets on a one-character insert at the cursor; with no cursor
+	-- it leaves the restored text alone
+	editor.CursorPosition = -1
+	editor.Text = state.text
+	applying = false
+	if editor:IsFocused() and state.cursor ~= -1 then
+		editor.CursorPosition = math.min(state.cursor, #state.text + 1)
+	end
+	open = false
+	refresh()
+end
+
+local function undo()
+	if index > 1 then
+		index -= 1
+		apply(history[index])
+	end
+end
+
+local function redo()
+	if index < #history then
+		index += 1
+		apply(history[index])
+	end
+end
+
+-- two copies of the + button (same fill, stroke and hover), to its left
+local function makeButton(name, icon, slot)
+	local button = addTab:Clone()
+	for _, child in button:GetChildren() do
+		if child:IsA("LuaSourceContainer") or child.Name == "HitArea" or child:IsA("UIScale") then
+			child:Destroy()
+		end
+	end
+	button.Name = name
+	button.Text = ""
+	button.ImageLabel.Image = icon
+	button.ImageLabel.Rotation = 0
+	button.ImageLabel.Size = UDim2.fromOffset(14, 14)
+	button:SetAttribute("Slot", slot)
+	button.Parent = topbar
+	ButtonFx.hitArea(button, Vector2.new(44, 44))
+	ButtonFx.bind(button)
+	return button
+end
+buttons.undo = makeButton("UndoButton", ICONS.undo, 2)
+buttons.redo = makeButton("RedoButton", ICONS.redo, 1)
+track(ButtonFx.onActivated(buttons.undo, undo)[1])
+track(ButtonFx.onActivated(buttons.redo, redo)[1])
+
+-- the buttons are squares as tall as the top bar (36, or 44 on phones); the fade behind the + widens
+-- to sit behind all three
+local fade = topbar:FindFirstChild("Frame")
+local fadeWidth = fade and fade.Size.X.Offset
+local function place()
+	local side = addTab.AbsoluteSize.X / ButtonFx.getScale()
+	for _, button in buttons do
+		button.Position = UDim2.new(1, -button:GetAttribute("Slot") * (side + GAP), 0, 0)
+	end
+	if fade then
+		fade.Size = UDim2.new(0, fadeWidth + 2 * (side + GAP), fade.Size.Y.Scale, fade.Size.Y.Offset)
+	end
+end
+place()
+track(addTab:GetPropertyChangedSignal("AbsoluteSize"):Connect(place))
+
+track(UserInputService.InputBegan:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.Keyboard or not editor:IsFocused() then
+		return
+	end
+	local ctrl = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+	local shift = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+	if not ctrl then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.Z then
+		if shift then
+			redo()
+		else
+			undo()
+		end
+	elseif input.KeyCode == Enum.KeyCode.Y then
+		redo()
+	end
+end))
+
+refresh()
 
 Gui.Destroying:Once(function()
 	for _, connection in connections do
@@ -7789,7 +7966,8 @@ local TREE = {"ScreenGui","ScreenGui",{ZIndexBehavior=E("ZIndexBehavior","Siblin
  {"ModuleScript","Settings",false,false,false,false,15},
  {"ModuleScript","Toast",false,false,false,false,16},
  {"LocalScript","SettingsPage",false,false,false,false,17},
- {"LocalScript","Output",false,false,false,false,18}}}
+ {"LocalScript","Output",false,false,false,false,18},
+ {"LocalScript","EditorHistory",false,false,false,false,19}}}
 
 local problems = {}
 local scriptsByIndex = {}
