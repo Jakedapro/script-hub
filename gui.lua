@@ -5591,6 +5591,19 @@ end
 
 local rows = {} -- {frame, spec, show(value, animate)}
 
+-- the design draws one toggle on (filled track with a gradient, knob right) and one off (faint
+-- track, knob left); every toggle borrows the gradient so it can show both
+local TRACK_ON, TRACK_OFF = 0.1, 0.975
+local trackGradient
+for _, row in toggleRows do
+	local button = row.ButtonContainer:FindFirstChildOfClass("TextButton")
+	trackGradient = trackGradient or button:FindFirstChildOfClass("UIGradient")
+end
+
+-- the last row sat under the toolbar
+local listPad = list:FindFirstChildOfClass("UIPadding") or Instance.new("UIPadding", list)
+listPad.PaddingBottom = UDim.new(0, 64)
+
 local function label(row, spec)
 	-- the left text column was 100 wide with 200-wide labels spilling out of it
 	local left
@@ -5613,15 +5626,60 @@ local function setupToggle(row, spec)
 	label(row, spec)
 	local button = row.ButtonContainer:FindFirstChildOfClass("TextButton")
 	local knob = button.In
-	local function show(on, animate)
-		local goal = {BackgroundTransparency = on and 0 or 0.95}
-		if animate then
-			ButtonFx.tween(knob, ButtonFx.FAST, goal)
-			ButtonFx.bounce(knob)
-		else
-			knob.BackgroundTransparency = goal.BackgroundTransparency
+	knob.BackgroundTransparency = 0
+	if trackGradient and not button:FindFirstChildOfClass("UIGradient") then
+		trackGradient:Clone().Parent = button
+	end
+	-- the track's fill is the state, so the generic hover (which restores the fill it saw when it
+	-- bound) stays off; hovering lifts the track a little instead
+	local handle = ButtonFx.handleOf(button)
+	if handle then
+		handle:destroy()
+	end
+	button:SetAttribute("NoFx", true)
+	button.AutoButtonColor = false
+
+	local on, hovered = false, false
+	local function paint(animate)
+		local fill = on and TRACK_ON or TRACK_OFF
+		if hovered then
+			fill = on and 0 or ButtonFx.hoverBg(TRACK_OFF)
+		end
+		local goals = {
+			{button, {BackgroundTransparency = fill}},
+			{knob, {
+				Position = on and UDim2.fromScale(1, 1) or UDim2.fromScale(0, 0),
+				AnchorPoint = on and Vector2.new(1, 1) or Vector2.zero,
+			}},
+		}
+		for _, goal in goals do
+			if animate then
+				ButtonFx.tween(goal[1], ButtonFx.SMOOTH, goal[2])
+			else
+				for property, target in goal[2] do
+					goal[1][property] = target
+				end
+			end
 		end
 	end
+	local function show(value, animate)
+		local changed = value ~= on
+		on = value
+		paint(animate)
+		if animate and changed then
+			ButtonFx.bounce(knob, 0.8)
+		end
+	end
+	track(button.MouseEnter:Connect(function()
+		if UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch then
+			hovered = true
+			paint(true)
+		end
+	end))
+	track(button.MouseLeave:Connect(function()
+		hovered = false
+		paint(true)
+	end))
 	track(button.Activated:Connect(function()
 		Settings.set(spec.key, not Settings.get(spec.key))
 	end))
