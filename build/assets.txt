@@ -15,6 +15,7 @@ rbxassetid://10723404337    first used by StarterGui.ScreenGui.library.TextButto
 rbxassetid://10723407389    first used by StarterGui.ScreenGui.Frame.TabButton.ImageLabel.Image
 rbxassetid://10723415040    first used by StarterGui.ScreenGui.scriptstroe.ScrollingFrame.Frame.ImageLabel.Image
 rbxassetid://10734923549    first used by StarterGui.ScreenGui.main.AltToolbar.ImageLabel.Image
+rbxassetid://10734924532    first used by StarterGui.ScreenGui.Tabs (source)
 rbxassetid://10734932586    first used by StarterGui.ScreenGui.EditorHistory (source)
 rbxassetid://10734933222    first used by StarterGui.ScreenGui.accountmanager.ScrollingFrame.Frame.buttoncontainer.TextButton.ImageLabel.Image
 rbxassetid://10734934585    first used by StarterGui.ScreenGui.main.Toolbar2.TextButton.ImageLabel.Image

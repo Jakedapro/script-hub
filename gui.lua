@@ -52,165 +52,8 @@ local SOURCES = {}
 
 -- StarterGui.ScreenGui.main.Topbar.AddTabButton.TabManager (LocalScript)
 SOURCES[1] = function(script, require)
-local AddTabButton = script.Parent
-local Topbar = AddTabButton.Parent
-local Tabs = Topbar.Tabs
-local FakeTabs = Topbar.FakeTabs
-local Accent = FakeTabs.TextButton.Accent
-local RunService = game:GetService("RunService")
-
-local Gui = Topbar:FindFirstAncestorOfClass("ScreenGui")
-local ButtonFx = require(Gui.ButtonFx)
-local tween = ButtonFx.tween
-local fast = ButtonFx.FAST
--- opening a tab has its own, slightly quicker feel than the page transitions
-local smooth = TweenInfo.new(0.35, Enum.EasingStyle.Quint)
-local pop = TweenInfo.new(0.4, Enum.EasingStyle.Back)
-
-local REST_BG, SELECTED_BG = 0.985, 0.95
-local REST_CONTENT, SELECTED_CONTENT = 0.85, 0.5
-
-local function tabTransparency(selected)
-	return selected and SELECTED_BG or REST_BG
-end
-
-local function contentTransparency(selected)
-	return selected and SELECTED_CONTENT or REST_CONTENT
-end
-
-local getScale = ButtonFx.getScale
-
-local function fadeContent(element, t)
-	tween(element.Content.TextLabel, fast, {TextTransparency = t})
-	tween(element.Content.ImageButton, fast, {ImageTransparency = t})
-	tween(element.Content.ImageLabel, fast, {ImageTransparency = t})
-end
-
--- one highlight that glides to the selected tab
-local Highlight = Instance.new("Frame")
-Highlight.Name = "Highlight"
-Highlight.BackgroundColor3 = Color3.new(1, 1, 1)
-Highlight.BackgroundTransparency = tabTransparency(true)
-Highlight.BorderSizePixel = 0
-Highlight.ZIndex = 0
-for _, name in {"UICorner", "UIGradient", "UIStroke", "Accent"} do
-	FakeTabs.TextButton[name]:Clone().Parent = Highlight
-end
-Highlight.Parent = Topbar
-
-local openTabs = {}
-local selectedTab = nil
-local tabCount = 0
-
-local function selectTab(tab, selected)
-	tab.Selected = selected
-	tween(tab.Element, fast, {BackgroundTransparency = tabTransparency(false)})
-	fadeContent(tab.Element, contentTransparency(selected))
-	if selected then
-		local accent = Highlight.Accent
-		accent.Size = UDim2.new(0, 4, 0, 0)
-		tween(accent, pop, {Size = Accent.Size})
-	end
-end
-
-local function createTab(selected, name, content)
-	local element = FakeTabs.FakeTab:Clone()
-	element.BackgroundTransparency = 1
-	element.Content.TextLabel.TextTransparency = 1
-	element.Content.TextLabel.Text = name
-	element.Content.ImageButton.ImageTransparency = 1
-	element.Content.ImageLabel.ImageTransparency = 1
-	element.Content.Position = UDim2.fromOffset(0, 8)
-	element.ClipsDescendants = true
-	element.Parent = Tabs
-	tabCount += 1
-
-	local tab = {
-		Element = element,
-		Name = name,
-		Content = content,
-		Selected = selected,
-		Id = tabCount,
-		SetSelected = selectTab,
-	}
-
-	-- open from 0 width, then the content rises in
-	task.spawn(function()
-		RunService.Heartbeat:Wait()
-		local width = element.AbsoluteSize.X / getScale()
-		element.AutomaticSize = Enum.AutomaticSize.None
-		element.Size = UDim2.new(0, 0, 1, 0)
-		tween(element, smooth, {Size = UDim2.new(0, width, 1, 0), BackgroundTransparency = tabTransparency(false)}).Completed:Wait()
-		element.AutomaticSize = Enum.AutomaticSize.X
-		element.Size = UDim2.new(0, 0, 1, 0)
-		element.ClipsDescendants = false
-		tween(Tabs, smooth, {CanvasPosition = Vector2.new(math.max(0, Tabs.AbsoluteCanvasSize.X - Tabs.AbsoluteWindowSize.X), 0)})
-	end)
-	tween(element.Content, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new()})
-	selectTab(tab, selected)
-	return tab
-end
-
-local function addTab(tab)
-	local element = tab.Element
-	element.Activated:Connect(function()
-		if selectedTab == tab then
-			return
-		end
-		selectedTab:SetSelected(false)
-		tab:SetSelected(true)
-		selectedTab = tab
-	end)
-	element.MouseEnter:Connect(function()
-		if not tab.Selected then
-			tween(element, fast, {BackgroundTransparency = ButtonFx.hoverBg(REST_BG)})
-			fadeContent(element, ButtonFx.hoverContent(REST_CONTENT))
-		end
-	end)
-	element.MouseLeave:Connect(function()
-		if not tab.Selected then
-			tween(element, fast, {BackgroundTransparency = tabTransparency(false)})
-			fadeContent(element, contentTransparency(false))
-		end
-	end)
-
-	table.insert(openTabs, tab)
-	return tab
-end
-
--- highlight follows the selected tab (handles switching, opening and scrolling)
-local hlPos, hlSize
-local follow = RunService.RenderStepped:Connect(function(dt)
-	if not selectedTab then
-		return
-	end
-	local element = selectedTab.Element
-	local scale = getScale()
-	local pos = (element.AbsolutePosition - Topbar.AbsolutePosition) / scale
-	local size = element.AbsoluteSize / scale
-	local alpha = 1 - math.exp(-dt * 18)
-	hlPos = hlPos and hlPos:Lerp(pos, alpha) or pos
-	hlSize = hlSize and hlSize:Lerp(size, alpha) or size
-	Highlight.Position = UDim2.fromOffset(hlPos.X, hlPos.Y)
-	Highlight.Size = UDim2.fromOffset(hlSize.X, hlSize.Y)
-end)
-Gui.Destroying:Once(function()
-	follow:Disconnect()
-end)
-
-selectedTab = addTab(createTab(true, "@imdooted", ""))
-
--- the + is 36x36; the hit area makes it thumb-sized without changing how it looks
-ButtonFx.hitArea(AddTabButton, Vector2.new(44, 44))
-ButtonFx.onActivated(AddTabButton, function()
-	local tab = createTab(true, "new" .. tostring(#openTabs) .. ".txt", "")
-	for _, other in openTabs do
-		if other.Selected then
-			other:SetSelected(false)
-		end
-	end
-	selectedTab = addTab(tab)
-end)
+-- the editor tabs live in the Tabs module (other scripts open tabs through it); this starts them
+require(script:FindFirstAncestorWhichIsA("ScreenGui").Tabs)
 
 end
 
@@ -1604,13 +1447,18 @@ local relaid = Layout.applied:Connect(function()
 	task.defer(park)
 end)
 
--- other scripts open a page by setting the "OpenPage" attribute to its name (Run opens Output)
+-- other scripts open a page by setting the "OpenPage" attribute to its name (Run opens Output,
+-- Find More opens Scripts); "minimize" tucks the window into its square
 local requested = Gui:GetAttributeChangedSignal("OpenPage"):Connect(function()
 	local name = Gui:GetAttribute("OpenPage")
 	if name == nil then
 		return
 	end
 	Gui:SetAttribute("OpenPage", nil)
+	if name == "minimize" then
+		minimize()
+		return
+	end
 	local page = Gui:FindFirstChild(name)
 	if page and bars[page] and not minimized then
 		go(page)
@@ -2154,13 +2002,18 @@ local function clear(section)
 	end
 end
 
+local query = "" -- the Library's search box
+
 local function render()
 	clear(mine)
 	clear(favorites)
+	local needle = query:lower()
 	for i, row in Storage.list() do
-		addItem(mine, row, i)
-		if row.favorite then
-			addItem(favorites, row, i)
+		if needle == "" or row.name:lower():find(needle, 1, true) then
+			addItem(mine, row, i)
+			if row.favorite then
+				addItem(favorites, row, i)
+			end
 		end
 	end
 end
@@ -2234,8 +2087,51 @@ local EDITOR_ACTIONS = {
 	end,
 }
 
+-- the Library's Search bar was a placeholder button; a TextBox inside it filters by name
+local searchBar = library.ScrollingFrame:FindFirstChild("TextButton")
+if searchBar then
+	local placeholder = searchBar:FindFirstChildOfClass("TextLabel")
+	local box = Instance.new("TextBox")
+	box.Name = "SearchBox"
+	box.BackgroundTransparency = 1
+	box.Size = UDim2.new(1, -28, 1, 0)
+	box.LayoutOrder = placeholder and placeholder.LayoutOrder or 2
+	box.FontFace = placeholder and placeholder.FontFace or FONT
+	box.TextSize = placeholder and placeholder.TextSize or 14
+	box.TextColor3 = WHITE
+	box.PlaceholderText = "Search..."
+	box.PlaceholderColor3 = Color3.fromRGB(110, 112, 120)
+	box.TextXAlignment = Enum.TextXAlignment.Left
+	box.TextTruncate = Enum.TextTruncate.AtEnd
+	box.ClearTextOnFocus = false
+	box.Text = ""
+	if placeholder then
+		placeholder.Visible = false
+	end
+	box.Parent = searchBar
+	connections[#connections + 1] = box:GetPropertyChangedSignal("Text"):Connect(function()
+		query = box.Text
+		queueRender()
+	end)
+	searchBar.Activated:Connect(function()
+		box:CaptureFocus()
+	end)
+end
+
+-- Find More goes to the ScriptBlox browser
+local findMore = library:FindFirstChild("TextButton")
+if findMore then
+	findMore.Activated:Connect(function()
+		gui:SetAttribute("OpenPage", "scriptstroe")
+	end)
+end
+
+local COPY_ICON = "rbxassetid://10709812159" -- the design gave Copy the same clipboard icon as Paste
 for _, b in gui.main.Toolbar2:GetChildren() do
 	local label = b:IsA("TextButton") and b:FindFirstChild("TextLabel")
+	if label and label.Text == "Copy" and b:FindFirstChild("ImageLabel") then
+		b.ImageLabel.Image = COPY_ICON
+	end
 	if label and label.Text == SAVE_LABEL then
 		table.insert(saveButtons, b) -- Buttons gives it the toolbar animation
 		b.Activated:Connect(openSavePrompt)
@@ -2774,8 +2670,8 @@ local function copyScript(slug, title)
 		clipboard(code)
 		setStatus("Copied " .. title)
 	else
-		editor.Text = code
-		setStatus("Loaded " .. title .. " into the Editor tab")
+		require(gui.Tabs).open(title, code)
+		setStatus("No clipboard here: " .. title .. " is open in the editor")
 	end
 end
 
@@ -3090,9 +2986,10 @@ track(Storage.changed:Connect(function()
 	end)
 end))
 
--- close hides the whole hub; RightControl brings it back
+-- close tucks the hub into its square like the logo does (hiding it outright left no way back on a
+-- phone); RightControl still shows / hides the whole thing
 close.Activated:Connect(function()
-	gui.Enabled = false
+	gui:SetAttribute("OpenPage", "minimize")
 end)
 track(UserInputService.InputBegan:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.RightControl then
@@ -4356,6 +4253,7 @@ SOURCES[9] = function(script, require)
 local gui = script.Parent
 local Storage = require(gui.Storage)
 local OutputLog = require(gui.OutputLog)
+local Tabs = require(gui.Tabs)
 local editor = gui.main.ScrollingFrame:FindFirstChild("TextBox")
 
 local ScriptActions = {}
@@ -4414,9 +4312,9 @@ function ScriptActions.load(name, report)
 	end
 	local code = loadCode(name, report)
 	if code then
-		editor.Text = code
-		editor:SetAttribute("ScriptName", name) -- the Save prompt prefills from this
-		report("Loaded \"" .. name .. "\" into the Editor tab")
+		-- its own tab (or the one it's already open in); the Save prompt prefills from the tab's name
+		Tabs.open(name, code, name)
+		report("Opened \"" .. name .. "\" in the editor")
 	end
 end
 
@@ -4448,9 +4346,8 @@ function ScriptActions.export(report)
 		clipboard(json)
 		report("Copied " .. count .. (count == 1 and " script" or " scripts") .. " as JSON")
 	elseif editor then
-		editor.Text = json
-		editor:SetAttribute("ScriptName", nil)
-		report("No clipboard here: the export is in the Editor tab")
+		Tabs.open("Scripts export", json)
+		report("No clipboard here: the export is open in the editor")
 	else
 		report("Nowhere to put the export", true)
 	end
@@ -5174,20 +5071,22 @@ local function toolbar(page, compact)
 	end
 end
 
-local home -- the design's window position, for going back to a large screen
+-- the design left the window at 47.7% / 45% of the screen; it's centred on every screen size, once at
+-- start and again when the layout switches between phone and desktop (not on every pass, so a
+-- window that's been dragged stays put)
+local centred = false
 local wasCompact = false
 
 local function apply()
 	local compact = Layout.compact
 	local window = Layout.window()
-	home = home or {anchor = Gui.main.AnchorPoint, position = Gui.main.Position}
+	local recentre = not centred or compact ~= wasCompact
+	centred = true
 	for _, page in PAGES do
 		page.Size = UDim2.fromOffset(window.X, window.Y)
-		if compact then
+		if recentre then
 			page.AnchorPoint = Vector2.new(0.5, 0.5)
 			page.Position = UDim2.fromScale(0.5, 0.5)
-		elseif wasCompact then
-			page.AnchorPoint, page.Position = home.anchor, home.position
 		end
 		local pad = page:FindFirstChildOfClass("UIPadding")
 		if pad then
@@ -5871,9 +5770,8 @@ for _, b in page.Toolbar2:GetChildren() do
 					setClipboard(json)
 					notify("Copied your settings")
 				else
-					editor.Text = json
-					editor:SetAttribute("ScriptName", nil)
-					notify("No clipboard here: the export is in the Editor tab")
+					require(Gui.Tabs).open("Settings export", json)
+					notify("No clipboard here: the export is open in the editor")
 				end
 			end)
 		elseif label.Text == "Import" then
@@ -6244,6 +6142,8 @@ end
 SOURCES[19] = function(script, require)
 -- Undo / Redo for the editor: buttons beside the + tab button, plus Ctrl+Z and Ctrl+Y (or
 -- Ctrl+Shift+Z). Typing is grouped into word-sized steps; a paste, Clear or Load is one step.
+-- Each editor tab has its own history: the Tabs module sets the editor's "TabId" attribute before
+-- it swaps the text in.
 local UserInputService = game:GetService("UserInputService")
 
 local Gui = script.Parent
@@ -6269,7 +6169,10 @@ local history = {{text = editor.Text, cursor = editor.CursorPosition}}
 local index = 1
 local open = false -- the current step still takes more typing
 local lastEdit = 0
-local applying = false
+
+local saved = {} -- [tab id] = {history, index} for the tabs not on screen
+local tabId = editor:GetAttribute("TabId")
+local switchingTo = nil -- set between a tab change and the text it brings
 
 local buttons = {}
 local function refresh()
@@ -6290,8 +6193,44 @@ local function push(state)
 	index = #history
 end
 
+local function finishSwitch()
+	local id = switchingTo
+	switchingTo = nil
+	local entry = saved[id]
+	saved[id] = nil
+	if entry then
+		history, index = entry[1], entry[2]
+	else
+		history, index = {{text = editor.Text, cursor = -1}}, 1
+	end
+	open = false
+	refresh()
+end
+
+track(editor:GetAttributeChangedSignal("TabId"):Connect(function()
+	local id = editor:GetAttribute("TabId")
+	if id == tabId then
+		return
+	end
+	if tabId ~= nil then
+		saved[tabId] = {history, index}
+	end
+	tabId = id
+	switchingTo = id
+	-- the new tab's text normally arrives as the next Text change; if it's the same text there is none
+	task.defer(function()
+		if switchingTo == id then
+			finishSwitch()
+		end
+	end)
+end))
+track(editor:GetAttributeChangedSignal("ClosedTab"):Connect(function()
+	saved[editor:GetAttribute("ClosedTab")] = nil
+end))
+
 track(editor:GetPropertyChangedSignal("Text"):Connect(function()
-	if applying then
+	if switchingTo ~= nil then
+		finishSwitch()
 		return
 	end
 	local text = editor.Text
@@ -6315,18 +6254,22 @@ track(editor:GetPropertyChangedSignal("Text"):Connect(function()
 	refresh()
 end))
 
+-- The Text change this causes matches history[index] by the time it's handled, so it's never
+-- recorded as an edit (that holds whether Roblox delivers the change at once or deferred).
 local function apply(state)
-	applying = true
 	-- the highlighter auto-closes brackets on a one-character insert at the cursor; with no cursor
-	-- it leaves the restored text alone
+	-- it leaves the restored text alone, and the cursor only comes back after it has looked
 	editor.CursorPosition = -1
 	editor.Text = state.text
-	applying = false
-	if editor:IsFocused() and state.cursor ~= -1 then
-		editor.CursorPosition = math.min(state.cursor, #state.text + 1)
-	end
 	open = false
 	refresh()
+	if state.cursor ~= -1 then
+		task.defer(function()
+			if editor:IsFocused() and editor.Text == state.text then
+				editor.CursorPosition = math.min(state.cursor, #state.text + 1)
+			end
+		end)
+	end
 end
 
 local function undo()
@@ -6371,17 +6314,35 @@ track(ButtonFx.onActivated(buttons.redo, redo)[1])
 -- to sit behind all three
 local fade = topbar:FindFirstChild("Frame")
 local fadeWidth = fade and fade.Size.X.Offset
+-- The design made the + square with an aspect constraint but left AutomaticSize on X, so it drew 40
+-- wide while laying its icon out in 36 and the icon sat off centre. All three are plain squares
+-- as tall as the bar.
+for _, button in {addTab, buttons.undo, buttons.redo} do
+	local constraint = button:FindFirstChildOfClass("UIAspectRatioConstraint")
+	if constraint then
+		constraint:Destroy()
+	end
+	button.AutomaticSize = Enum.AutomaticSize.None
+	button.Text = ""
+end
 local function place()
-	local side = addTab.AbsoluteSize.X / ButtonFx.getScale()
+	local side = topbar.AbsoluteSize.Y / ButtonFx.getScale()
+	addTab.Size = UDim2.fromOffset(side, side)
 	for _, button in buttons do
+		button.Size = UDim2.fromOffset(side, side)
 		button.Position = UDim2.new(1, -button:GetAttribute("Slot") * (side + GAP), 0, 0)
 	end
+	local reserved = 3 * side + 3 * GAP
 	if fade then
 		fade.Size = UDim2.new(0, fadeWidth + 2 * (side + GAP), fade.Size.Y.Scale, fade.Size.Y.Offset)
 	end
+	-- the tab strip stops short of the buttons, so a tab is never half under them
+	for _, strip in {topbar:FindFirstChild("Tabs"), topbar:FindFirstChild("FakeTabs")} do
+		strip.Size = UDim2.new(1, -reserved, strip.Size.Y.Scale, strip.Size.Y.Offset)
+	end
 end
 place()
-track(addTab:GetPropertyChangedSignal("AbsoluteSize"):Connect(place))
+track(topbar:GetPropertyChangedSignal("AbsoluteSize"):Connect(place))
 
 track(UserInputService.InputBegan:Connect(function(input)
 	if input.UserInputType ~= Enum.UserInputType.Keyboard or not editor:IsFocused() then
@@ -6410,6 +6371,349 @@ Gui.Destroying:Once(function()
 		connection:Disconnect()
 	end
 end)
+
+end
+
+-- StarterGui.ScreenGui.Tabs (ModuleScript)
+SOURCES[20] = function(script, require)
+-- Editor tabs. Every tab is its own script: its text, its name and, once saved or loaded, the saved
+-- script it belongs to. The editor has one TextBox, so switching tabs swaps its text; EditorHistory
+-- keeps a separate undo history per tab (it follows the editor's "TabId" attribute).
+-- Other scripts open code with Tabs.open(name, text, savedName).
+local RunService = game:GetService("RunService")
+
+local Gui = script.Parent
+local ButtonFx = require(Gui.ButtonFx)
+local notify = require(Gui.Toast).notify
+
+local editor = Gui.main.ScrollingFrame.TextBox
+local Topbar = Gui.main.Topbar
+local AddTabButton = Topbar.AddTabButton
+local TabList = Topbar.Tabs
+local FakeTabs = Topbar.FakeTabs
+local Accent = FakeTabs.TextButton.Accent
+
+local tween = ButtonFx.tween
+local fast = ButtonFx.FAST
+-- opening a tab has its own, slightly quicker feel than the page transitions
+local smooth = TweenInfo.new(0.35, Enum.EasingStyle.Quint)
+local pop = TweenInfo.new(0.4, Enum.EasingStyle.Back)
+
+local REST_BG, SELECTED_BG = 0.985, 0.95
+local REST_CONTENT, SELECTED_CONTENT = 0.85, 0.5
+local PLUS = "rbxassetid://10734924532" -- lucide plus; the design rotated the close X, which sat off centre
+
+local Tabs = {}
+local changed = Instance.new("BindableEvent")
+Tabs.changed = changed.Event -- fires after a tab opens, closes, switches or is renamed
+
+local connections = {}
+local function track(connection)
+	table.insert(connections, connection)
+	return connection
+end
+
+local function fadeContent(element, t)
+	tween(element.Content.TextLabel, fast, {TextTransparency = t})
+	tween(element.Content.ImageButton, fast, {ImageTransparency = t})
+	tween(element.Content.ImageLabel, fast, {ImageTransparency = t})
+end
+
+-- one highlight that glides to the selected tab
+local Highlight = Instance.new("Frame")
+Highlight.Name = "Highlight"
+Highlight.BackgroundColor3 = Color3.new(1, 1, 1)
+Highlight.BackgroundTransparency = SELECTED_BG
+Highlight.BorderSizePixel = 0
+Highlight.ZIndex = 0
+Highlight.ClipsDescendants = true
+for _, name in {"UICorner", "UIGradient", "UIStroke", "Accent"} do
+	FakeTabs.TextButton[name]:Clone().Parent = Highlight
+end
+Highlight.Parent = Topbar
+
+AddTabButton.ImageLabel.Image = PLUS
+AddTabButton.ImageLabel.Rotation = 0
+AddTabButton.ImageLabel.Size = UDim2.fromOffset(14, 14)
+
+local open = {} -- tabs in strip order
+local current = nil
+local nextId = 0
+local switching = false
+
+local function untitled()
+	local taken = {}
+	for _, tab in open do
+		taken[tab.name] = true
+	end
+	local n = 1
+	while taken["Script " .. n] do
+		n += 1
+	end
+	return "Script " .. n
+end
+
+local function paint(tab, selected)
+	tween(tab.element, fast, {BackgroundTransparency = REST_BG})
+	fadeContent(tab.element, selected and SELECTED_CONTENT or REST_CONTENT)
+end
+
+local function scrollTo(tab)
+	task.defer(function()
+		local element = tab.element
+		if not element.Parent then
+			return
+		end
+		local scale = ButtonFx.getScale()
+		local left = (element.AbsolutePosition.X - TabList.AbsolutePosition.X) / scale + TabList.CanvasPosition.X
+		local right = left + element.AbsoluteSize.X / scale
+		local width = TabList.AbsoluteWindowSize.X / scale
+		local x = TabList.CanvasPosition.X
+		if left < x then
+			x = left
+		elseif right > x + width then
+			x = right - width
+		end
+		tween(TabList, smooth, {CanvasPosition = Vector2.new(math.max(0, x), 0)})
+	end)
+end
+
+-- shows a tab's script in the editor; the current text goes back into the tab it came from
+local function select(tab)
+	if tab == current then
+		return
+	end
+	local previous = current
+	if previous then
+		previous.text = editor.Text
+		paint(previous, false)
+	end
+	current = tab
+	paint(tab, true)
+	local accent = Highlight.Accent
+	accent.Size = UDim2.new(0, 4, 0, 0)
+	tween(accent, pop, {Size = Accent.Size})
+
+	switching = true
+	editor:SetAttribute("TabId", tab.id) -- EditorHistory swaps to this tab's undo history first
+	editor:SetAttribute("ScriptName", tab.savedName)
+	editor.CursorPosition = -1 -- so the highlighter doesn't treat the swap as typing and auto-close it
+	editor.Text = tab.text
+	switching = false
+	scrollTo(tab)
+	changed:Fire()
+end
+
+local function rename(tab, name)
+	tab.name = name
+	tab.element.Content.TextLabel.Text = name
+	changed:Fire()
+end
+
+local close -- forward: the tab's own × closes it
+
+local function create(name, text, savedName)
+	nextId += 1
+	local element = FakeTabs.FakeTab:Clone()
+	element.Name = "Tab" .. nextId
+	element.BackgroundTransparency = 1
+	element.Content.TextLabel.TextTransparency = 1
+	element.Content.TextLabel.Text = name
+	element.Content.ImageButton.ImageTransparency = 1
+	element.Content.ImageLabel.ImageTransparency = 1
+	element.Content.Position = UDim2.fromOffset(0, 8)
+	element.ClipsDescendants = true
+	element.LayoutOrder = nextId
+	element.Parent = TabList
+
+	local tab = {id = nextId, name = name, text = text or "", savedName = savedName, element = element}
+	table.insert(open, tab)
+
+	-- open from 0 width, then the content rises in
+	task.spawn(function()
+		RunService.Heartbeat:Wait()
+		local width = element.AbsoluteSize.X / ButtonFx.getScale()
+		element.AutomaticSize = Enum.AutomaticSize.None
+		element.Size = UDim2.new(0, 0, 1, 0)
+		tween(element, smooth, {Size = UDim2.new(0, width, 1, 0), BackgroundTransparency = REST_BG}).Completed:Wait()
+		if element.Parent then
+			element.AutomaticSize = Enum.AutomaticSize.X
+			element.Size = UDim2.new(0, 0, 1, 0)
+			element.ClipsDescendants = false
+			scrollTo(tab)
+		end
+	end)
+	tween(element.Content, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new()})
+
+	element.Activated:Connect(function()
+		select(tab)
+	end)
+	element.MouseEnter:Connect(function()
+		if tab ~= current then
+			tween(element, fast, {BackgroundTransparency = ButtonFx.hoverBg(REST_BG)})
+			fadeContent(element, ButtonFx.hoverContent(REST_CONTENT))
+		end
+	end)
+	element.MouseLeave:Connect(function()
+		if tab ~= current then
+			paint(tab, false)
+		end
+	end)
+
+	-- the 12px × gets a thumb-sized hit area; a tab with code in it asks once before closing
+	local x = element.Content.ImageButton
+	x:SetAttribute("NoFx", true)
+	ButtonFx.hitArea(x, Vector2.new(28, 28))
+	local armedAt
+	ButtonFx.onActivated(x, function()
+		local text = tab == current and editor.Text or tab.text
+		local now = os.clock()
+		if text:match("%S") and not (armedAt and now - armedAt < 3 and now - armedAt > 0.3) then
+			armedAt = now
+			tween(x, fast, {ImageColor3 = ButtonFx.DANGER})
+			notify("Tap × again to close " .. tab.name)
+			task.delay(3, function()
+				if armedAt == now then
+					armedAt = nil
+					tween(x, fast, {ImageColor3 = Color3.new(1, 1, 1)})
+				end
+			end)
+			return
+		end
+		close(tab)
+	end)
+	return tab
+end
+
+close = function(tab)
+	local index = table.find(open, tab)
+	if not index then
+		return
+	end
+	if #open == 1 then
+		-- never leave the editor without a tab: the last one is swapped for a fresh one
+		select(create(untitled(), ""))
+		index = table.find(open, tab)
+	elseif tab == current then
+		select(open[index + 1] or open[index - 1])
+	end
+	table.remove(open, index)
+	local element = tab.element
+	element.AutomaticSize = Enum.AutomaticSize.None
+	element.ClipsDescendants = true
+	element.Size = UDim2.new(0, element.AbsoluteSize.X / ButtonFx.getScale(), 1, 0)
+	fadeContent(element, 1)
+	tween(element, smooth, {Size = UDim2.new(0, 0, 1, 0), BackgroundTransparency = 1}).Completed:Connect(function()
+		element:Destroy()
+	end)
+	editor:SetAttribute("ClosedTab", tab.id) -- EditorHistory drops that tab's history
+	changed:Fire()
+end
+
+-- Opens code in a tab and shows it. A saved script that's already open just comes to the front;
+-- an empty current tab is reused instead of leaving it behind.
+function Tabs.open(name, text, savedName)
+	if savedName then
+		for _, tab in open do
+			if tab.savedName == savedName then
+				select(tab)
+				return tab
+			end
+		end
+	end
+	local tab
+	if current and not editor.Text:match("%S") and not current.savedName then
+		tab = current
+		rename(tab, name)
+		tab.savedName = savedName
+		current = nil -- so select() reloads it with the new text
+		tab.text = text or ""
+		select(tab)
+	else
+		tab = create(name, text, savedName)
+		select(tab)
+	end
+	return tab
+end
+
+-- + always gives a new, blank script
+function Tabs.new()
+	local tab = create(untitled(), "")
+	select(tab)
+	return tab
+end
+
+function Tabs.current()
+	return current
+end
+
+Tabs.select = select
+Tabs.close = function(tab)
+	close(tab)
+end
+
+function Tabs.list()
+	return open
+end
+
+-- saving (or loading) names the tab after the saved script
+track(editor:GetAttributeChangedSignal("ScriptName"):Connect(function()
+	local name = editor:GetAttribute("ScriptName")
+	if switching or not current then
+		return
+	end
+	current.savedName = name
+	if name then
+		rename(current, name)
+	end
+end))
+
+-- highlight follows the selected tab, clipped to the strip so it never shows over the buttons
+local hlPos, hlSize
+track(RunService.RenderStepped:Connect(function(dt)
+	if not current or not current.element.Parent then
+		return
+	end
+	local element = current.element
+	local scale = ButtonFx.getScale()
+	local left = math.max(element.AbsolutePosition.X, TabList.AbsolutePosition.X)
+	local right = math.min(element.AbsolutePosition.X + element.AbsoluteSize.X, TabList.AbsolutePosition.X + TabList.AbsoluteWindowSize.X)
+	local pos = Vector2.new(left - Topbar.AbsolutePosition.X, element.AbsolutePosition.Y - Topbar.AbsolutePosition.Y) / scale
+	local size = Vector2.new(math.max(0, right - left), element.AbsoluteSize.Y) / scale
+	local alpha = 1 - math.exp(-dt * 18)
+	hlPos = hlPos and hlPos:Lerp(pos, alpha) or pos
+	hlSize = hlSize and hlSize:Lerp(size, alpha) or size
+	Highlight.Position = UDim2.fromOffset(hlPos.X, hlPos.Y)
+	Highlight.Size = UDim2.fromOffset(hlSize.X, hlSize.Y)
+	Highlight.Visible = hlSize.X > 1
+end))
+
+-- the design's placeholder tabs and sample text go; the editor opens on an empty first script
+for _, child in TabList:GetChildren() do
+	if child:IsA("GuiButton") then
+		child:Destroy()
+	end
+end
+local layout = TabList:FindFirstChildOfClass("UIListLayout")
+if layout then
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+end
+editor.Text = ""
+select(create(untitled(), ""))
+
+-- the + is 36x36; the hit area makes it thumb-sized without changing how it looks
+ButtonFx.hitArea(AddTabButton, Vector2.new(44, 44))
+ButtonFx.onActivated(AddTabButton, function()
+	Tabs.new()
+end)
+
+Gui.Destroying:Once(function()
+	for _, connection in connections do
+		connection:Disconnect()
+	end
+end)
+
+return Tabs
 
 end
 
@@ -8025,7 +8329,8 @@ local TREE = {"ScreenGui","ScreenGui",{ZIndexBehavior=E("ZIndexBehavior","Siblin
  {"ModuleScript","Toast",false,false,false,false,16},
  {"LocalScript","SettingsPage",false,false,false,false,17},
  {"LocalScript","Output",false,false,false,false,18},
- {"LocalScript","EditorHistory",false,false,false,false,19}}}
+ {"LocalScript","EditorHistory",false,false,false,false,19},
+ {"ModuleScript","Tabs",false,false,false,false,20}}}
 
 local problems = {}
 local scriptsByIndex = {}
